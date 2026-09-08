@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
@@ -9,8 +10,10 @@ from app.core.enums import TicketPriority, TicketStatus, UserRole
 from app.core.logging import get_logger
 from app.core.rate_limit import rate_limit
 from app.models.user import User
+from app.repositories.ai_suggestion_repository import AISuggestionRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.ai_suggestion import AISuggestionOut
 from app.schemas.ticket import TicketAssignRequest, TicketCreate, TicketListResponse, TicketOut
 from app.services.ticket_service import TicketService
 from app.workers.classify import classify_ticket
@@ -81,6 +84,25 @@ async def get_ticket(
 ) -> TicketOut:
     ticket = await ticket_service.get_ticket_for_user(ticket_id, user)
     return TicketOut.model_validate(ticket)
+
+
+@router.get("/{ticket_id}/ai-suggestion", response_model=None)
+async def get_ai_suggestion(
+    ticket_id: uuid.UUID,
+    user: User = Depends(require_role(UserRole.AGENT, UserRole.ADMIN)),
+    ticket_service: TicketService = Depends(get_ticket_service),
+    session: AsyncSession = Depends(get_db),
+) -> AISuggestionOut | JSONResponse:
+    await ticket_service.get_ticket_for_user(ticket_id, user)  # 404 if ticket doesn't exist
+
+    suggestion = await AISuggestionRepository(session).get_by_ticket_id(ticket_id)
+    if suggestion is None:
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={"detail": "Suggestion is still being generated"},
+        )
+
+    return AISuggestionOut.model_validate(suggestion)
 
 
 @router.patch("/{ticket_id}/assign", response_model=TicketOut)

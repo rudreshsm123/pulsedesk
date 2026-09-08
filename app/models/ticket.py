@@ -60,7 +60,10 @@ class AISuggestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "ai_suggestions"
 
     ticket_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("tickets.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
     )
     suggested_reply: Mapped[str] = mapped_column(Text, nullable=False)
     source_article_ids: Mapped[list[uuid.UUID]] = mapped_column(

@@ -135,6 +135,7 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             sa.ForeignKey("tickets.id", ondelete="CASCADE"),
             nullable=False,
+            unique=True,
         ),
         sa.Column("suggested_reply", sa.Text, nullable=False),
         sa.Column(

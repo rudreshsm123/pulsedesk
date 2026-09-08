@@ -9,7 +9,12 @@ celery_app = Celery(
     "pulsedesk",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.workers.classify", "app.workers.sla_sweep"],
+    include=[
+        "app.workers.classify",
+        "app.workers.sla_sweep",
+        "app.workers.kb_index",
+        "app.workers.rag_suggest",
+    ],
 )
 
 celery_app.conf.update(

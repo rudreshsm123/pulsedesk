@@ -1,0 +1,18 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+
+class KBArticleCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    body: str = Field(min_length=1)
+
+
+class KBArticleOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    body: str
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
