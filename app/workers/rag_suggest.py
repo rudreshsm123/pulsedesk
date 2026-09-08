@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from app.core.db import AsyncSessionFactory
@@ -10,6 +9,7 @@ from app.services.embeddings import get_embedding_provider
 from app.services.llm.base import RetrievedChunk
 from app.services.llm.mock_provider import get_llm_provider
 from app.workers.celery_app import celery_app
+from app.workers.task_runner import run_task
 
 logger = get_logger("pulsedesk.workers.rag_suggest")
 
@@ -25,7 +25,7 @@ _TOP_K = 3
     acks_late=True,
 )
 def generate_suggestion(self, ticket_id: str) -> None:
-    asyncio.run(_generate_suggestion(uuid.UUID(ticket_id)))
+    run_task(_generate_suggestion(uuid.UUID(ticket_id)))
 
 
 async def _generate_suggestion(ticket_id: uuid.UUID) -> None:

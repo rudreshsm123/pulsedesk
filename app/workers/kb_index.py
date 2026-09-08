@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from app.core.db import AsyncSessionFactory
@@ -7,6 +6,7 @@ from app.repositories.kb_repository import KBArticleRepository, KBChunkRepositor
 from app.services.embeddings import get_embedding_provider
 from app.services.kb_service import KBService
 from app.workers.celery_app import celery_app
+from app.workers.task_runner import run_task
 
 logger = get_logger("pulsedesk.workers.kb_index")
 
@@ -20,7 +20,7 @@ logger = get_logger("pulsedesk.workers.kb_index")
     acks_late=True,
 )
 def index_kb_article(self, article_id: str) -> None:
-    asyncio.run(_index_kb_article(uuid.UUID(article_id)))
+    run_task(_index_kb_article(uuid.UUID(article_id)))
 
 
 async def _index_kb_article(article_id: uuid.UUID) -> None:

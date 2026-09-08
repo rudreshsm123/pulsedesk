@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -8,6 +7,7 @@ from app.core.enums import TicketStatus
 from app.core.logging import get_logger
 from app.models.ticket import Ticket
 from app.workers.celery_app import celery_app
+from app.workers.task_runner import run_task
 
 logger = get_logger("pulsedesk.workers.sla_sweep")
 
@@ -16,7 +16,7 @@ _OPEN_STATUSES = (TicketStatus.PENDING, TicketStatus.CLASSIFIED, TicketStatus.IN
 
 @celery_app.task(name="app.workers.sla_sweep.sweep_sla_breaches")
 def sweep_sla_breaches() -> int:
-    return asyncio.run(_sweep_sla_breaches())
+    return run_task(_sweep_sla_breaches())
 
 
 async def _sweep_sla_breaches() -> int:

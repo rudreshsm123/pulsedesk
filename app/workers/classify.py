@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from app.core.db import AsyncSessionFactory
@@ -8,6 +7,7 @@ from app.repositories.ticket_repository import TicketRepository
 from app.services.classification import classify_ticket_text
 from app.services.llm.mock_provider import get_llm_provider
 from app.workers.celery_app import celery_app
+from app.workers.task_runner import run_task
 
 logger = get_logger("pulsedesk.workers.classify")
 
@@ -21,7 +21,7 @@ logger = get_logger("pulsedesk.workers.classify")
     acks_late=True,
 )
 def classify_ticket(self, ticket_id: str) -> None:
-    asyncio.run(_classify_ticket(uuid.UUID(ticket_id)))
+    run_task(_classify_ticket(uuid.UUID(ticket_id)))
 
 
 async def _classify_ticket(ticket_id: uuid.UUID) -> None:
