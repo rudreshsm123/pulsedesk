@@ -15,7 +15,9 @@ click-plugins==1.1.1.2
 click-repl==0.3.0
 colorama==0.4.6
 cryptography==50.0.1
+dnspython==2.8.0
 ecdsa==0.19.2
+email-validator==2.3.0
 fastapi==0.141.1
 greenlet==3.5.5
 h11==0.16.0
