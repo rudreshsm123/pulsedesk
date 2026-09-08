@@ -1,30 +1,10 @@
-import uuid
-
 import pytest
 
 from app.core.enums import UserRole
 from app.core.exceptions import DuplicateResourceError, InvalidCredentialsError
 from app.core.security import TokenType, decode_token, hash_password
-from app.models.user import User
 from app.services.auth_service import AuthService
-
-
-class FakeUserRepository:
-    """In-memory stand-in for UserRepository so auth logic is tested without a real DB."""
-
-    def __init__(self):
-        self._users: dict[str, User] = {}
-
-    async def get_by_email(self, email: str) -> User | None:
-        return self._users.get(email)
-
-    async def get_by_id(self, user_id: uuid.UUID) -> User | None:
-        return next((u for u in self._users.values() if u.id == user_id), None)
-
-    async def create(self, email: str, hashed_password: str, role: str) -> User:
-        user = User(id=uuid.uuid4(), email=email, hashed_password=hashed_password, role=role)
-        self._users[email] = user
-        return user
+from tests.fakes import FakeUserRepository
 
 
 @pytest.fixture

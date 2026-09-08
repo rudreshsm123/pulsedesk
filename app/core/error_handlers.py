@@ -9,6 +9,7 @@ from app.core.exceptions import (
     NotFoundError,
     UnauthorizedActionError,
 )
+from app.core.pagination import InvalidCursorError
 
 _STATUS_MAP = {
     NotFoundError: 404,
@@ -17,6 +18,7 @@ _STATUS_MAP = {
     IdempotencyConflictError: 409,
     InvalidCredentialsError: 401,
     InvalidStateTransitionError: 409,
+    InvalidCursorError: 400,
 }
 
 
