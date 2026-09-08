@@ -6,20 +6,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, require_role
 from app.core.db import get_db
 from app.core.enums import TicketPriority, TicketStatus, UserRole
+from app.core.logging import get_logger
+from app.core.rate_limit import rate_limit
 from app.models.user import User
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.ticket import TicketAssignRequest, TicketCreate, TicketListResponse, TicketOut
 from app.services.ticket_service import TicketService
+from app.workers.classify import classify_ticket
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
+logger = get_logger("pulsedesk.api.tickets")
 
 
 def get_ticket_service(session: AsyncSession = Depends(get_db)) -> TicketService:
     return TicketService(TicketRepository(session), UserRepository(session))
 
 
-@router.post("", response_model=TicketOut, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "",
+    response_model=TicketOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(rate_limit("ticket-create", capacity=30, per_minute=30))],
+)
 async def create_ticket(
     body: TicketCreate,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
@@ -32,7 +41,19 @@ async def create_ticket(
         body=body.body,
         idempotency_key=idempotency_key,
     )
+    _enqueue_classification(str(ticket.id))
     return TicketOut.model_validate(ticket)
+
+
+def _enqueue_classification(ticket_id: str) -> None:
+    # A Celery/Redis outage must not fail ticket creation -- the ticket is durably
+    # persisted as PENDING regardless, and the SLA sweep + a manual re-enqueue can
+    # recover it later. Enqueue failures degrade to "classification is delayed",
+    # never to "the customer's ticket submission failed".
+    try:
+        classify_ticket.delay(ticket_id)
+    except Exception:
+        logger.exception(f"Failed to enqueue classification for ticket {ticket_id}")
 
 
 @router.get("", response_model=TicketListResponse)

@@ -39,7 +39,12 @@ def test_refresh_token_rejected_as_access_token():
 
 def test_tampered_token_rejected():
     token = create_access_token(user_id="user-123", role="customer")
-    tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+    # Flip a character in the middle of the signature, not the last one: base64url's
+    # final character in a token can land on padding bits that don't affect the decoded
+    # bytes at all, which would make this tamper a silent no-op some of the time.
+    mid = len(token) // 2
+    flipped = "a" if token[mid] != "a" else "b"
+    tampered = token[:mid] + flipped + token[mid + 1 :]
 
     with pytest.raises(InvalidTokenError):
         decode_token(tampered, TokenType.ACCESS)
