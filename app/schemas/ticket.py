@@ -35,3 +35,10 @@ class TicketListResponse(BaseModel):
 
 class TicketAssignRequest(BaseModel):
     agent_id: uuid.UUID
+
+
+class TicketAnalyticsOut(BaseModel):
+    total_tickets: int
+    by_status: dict[str, int]
+    by_priority: dict[str, int]
+    by_category: dict[str, int]

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import TicketPriority, TicketStatus
@@ -84,3 +84,33 @@ class TicketRepository:
         await self._session.flush()
         await self._session.refresh(ticket)
         return ticket
+
+    async def total_count(self) -> int:
+        result = await self._session.execute(select(func.count()).select_from(Ticket))
+        return result.scalar_one()
+
+    async def count_by_status(self) -> dict[str, int]:
+        # status/priority are plain String columns (not a SQLAlchemy Enum type), so a
+        # columns-only query like this returns the raw driver value (a plain str),
+        # not a TicketStatus instance -- there's no .value to unwrap here.
+        stmt = select(Ticket.status, func.count()).group_by(Ticket.status)
+        result = await self._session.execute(stmt)
+        return dict(result.all())
+
+    async def count_by_priority(self) -> dict[str, int]:
+        stmt = (
+            select(Ticket.priority, func.count())
+            .where(Ticket.priority.is_not(None))
+            .group_by(Ticket.priority)
+        )
+        result = await self._session.execute(stmt)
+        return dict(result.all())
+
+    async def count_by_category(self) -> dict[str, int]:
+        stmt = (
+            select(Ticket.category, func.count())
+            .where(Ticket.category.is_not(None))
+            .group_by(Ticket.category)
+        )
+        result = await self._session.execute(stmt)
+        return dict(result.all())

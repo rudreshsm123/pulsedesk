@@ -14,7 +14,13 @@ from app.repositories.ai_suggestion_repository import AISuggestionRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.ai_suggestion import AISuggestionOut
-from app.schemas.ticket import TicketAssignRequest, TicketCreate, TicketListResponse, TicketOut
+from app.schemas.ticket import (
+    TicketAnalyticsOut,
+    TicketAssignRequest,
+    TicketCreate,
+    TicketListResponse,
+    TicketOut,
+)
 from app.services.ticket_service import TicketService
 from app.workers.classify import classify_ticket
 
@@ -23,6 +29,7 @@ logger = get_logger("pulsedesk.api.tickets")
 
 require_customer = require_role(UserRole.CUSTOMER)
 require_agent_or_admin = require_role(UserRole.AGENT, UserRole.ADMIN)
+require_admin = require_role(UserRole.ADMIN)
 
 
 def get_ticket_service(session: AsyncSession = Depends(get_db)) -> TicketService:
@@ -76,6 +83,20 @@ async def list_tickets(
     )
     return TicketListResponse(
         items=[TicketOut.model_validate(t) for t in tickets], next_cursor=next_cursor
+    )
+
+
+@router.get("/analytics/sla", response_model=TicketAnalyticsOut)
+async def get_ticket_analytics(
+    _admin: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> TicketAnalyticsOut:
+    repo = TicketRepository(session)
+    return TicketAnalyticsOut(
+        total_tickets=await repo.total_count(),
+        by_status=await repo.count_by_status(),
+        by_priority=await repo.count_by_priority(),
+        by_category=await repo.count_by_category(),
     )
 
 

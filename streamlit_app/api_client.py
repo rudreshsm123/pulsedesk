@@ -98,6 +98,12 @@ def assign_ticket(access_token: str, ticket_id: str, agent_id: str) -> dict:
     )
 
 
+def get_ticket_analytics(access_token: str) -> dict:
+    return _handle(
+        requests.get(f"{API_BASE_URL}/tickets/analytics/sla", headers=_auth_headers(access_token))
+    )
+
+
 def create_kb_article(access_token: str, title: str, body: str) -> dict:
     return _handle(
         requests.post(
