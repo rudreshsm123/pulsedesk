@@ -84,6 +84,26 @@ This starts Postgres (with pgvector), Redis, runs migrations once (`migrate` ser
 then starts the API (`:8000`), a Celery worker, and Celery beat. Interactive API docs:
 `http://localhost:8000/docs`.
 
+### Web UI (optional)
+
+The API is the actual deliverable (see "Problem" above — this was scoped API-first,
+deliberately without a UI). `streamlit_app/` is a thin, separately-run demo client for
+people who'd rather click through it than use `/docs` or curl — it talks to the API
+over HTTP like any other client, never touches the database directly, and isn't part
+of the backend's test/CI surface.
+
+```bash
+pip install -r requirements-streamlit.txt
+cd streamlit_app
+streamlit run streamlit_app.py
+```
+
+Opens at `http://localhost:8501`. Register an account (starts as "customer"), or
+promote one to agent/admin directly in the DB:
+```bash
+docker exec pulsedesk-postgres-1 psql -U pulsedesk -d pulsedesk -c "UPDATE users SET role='agent' WHERE email='you@example.com';"
+```
+
 ### Local dev without Docker
 
 ```bash
