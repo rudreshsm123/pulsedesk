@@ -8,6 +8,7 @@ from app.repositories.ticket_repository import TicketRepository
 from app.services.embeddings import get_embedding_provider
 from app.services.llm.base import RetrievedChunk
 from app.services.llm.factory import get_llm_provider
+from app.services.llm.mock_provider import MockLLMProvider
 from app.workers.celery_app import celery_app
 from app.workers.task_runner import run_task
 
@@ -55,8 +56,18 @@ async def _generate_suggestion(ticket_id: uuid.UUID) -> None:
             for chunk, sim in results
         ]
 
-        llm = get_llm_provider()
-        draft = llm.generate_resolution(ticket_text, retrieved)
+        try:
+            draft = get_llm_provider().generate_resolution(ticket_text, retrieved)
+        except Exception:
+            # Mirrors classify_ticket's fallback: a down/unbilled/rate-limited real
+            # provider must not leave the ticket permanently stuck retrying with no
+            # suggestion ever produced. MockLLMProvider is always available (no API
+            # call) and safe to fall back to -- it's extractive/threshold-gated, so it
+            # degrades to an honest "not enough information" rather than a guess.
+            logger.exception(
+                f"generate_suggestion: LLM call failed for {ticket_id}, using extractive fallback"
+            )
+            draft = MockLLMProvider().generate_resolution(ticket_text, retrieved)
 
         await suggestion_repo.create(
             ticket_id=ticket_id,
