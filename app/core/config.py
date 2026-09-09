@@ -21,13 +21,15 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    llm_provider: str = "mock"  # "mock" or "anthropic"
+    llm_provider: str = "mock"  # "mock", "anthropic", or "groq"
     llm_api_key: str | None = None
     # Small/cheap model for classification (runs on every ticket), larger model only for
     # the resolution draft (Part 5's cost-control strategy: cheap model for the
-    # high-volume path, better model only where quality actually matters).
-    llm_classify_model: str = "claude-haiku-4-5-20251001"
-    llm_resolution_model: str = "claude-sonnet-5"
+    # high-volume path, better model only where quality actually matters). Left unset by
+    # default since the right value depends on which provider is selected -- the factory
+    # (app/services/llm/factory.py) fills in a provider-appropriate default when unset.
+    llm_classify_model: str | None = None
+    llm_resolution_model: str | None = None
 
     default_sla_hours: int = 24
     rate_limit_per_minute: int = 60
