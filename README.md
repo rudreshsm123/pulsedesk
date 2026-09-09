@@ -60,8 +60,9 @@ has passed as `BREACHED`.
   `LLM_API_KEY`) are implemented and tested (with the client mocked, so tests need no
   key/network) but neither is the default, since building this didn't start with an
   API key available -- Anthropic requires billing with no meaningful free tier; Groq
-  hosts open-weight models (Llama) at no cost, which is why it's the one actually
-  wired up with a live key. All three backends share the same similarity threshold and
+  hosts open-weight models (currently OpenAI's gpt-oss) at no cost, which is why it's
+  the one actually wired up with a live key. All three backends share the same
+  similarity threshold and
   grounded-prompt template, so grounding is a property of the pipeline, not something
   a real model could be prompted out of.
 - **A dedicated vector database (Pinecone/Weaviate).** pgvector on the existing

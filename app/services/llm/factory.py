@@ -11,7 +11,11 @@ settings = get_settings()
 # they live here rather than as a single generic default on Settings.
 _DEFAULT_MODELS = {
     "anthropic": ("claude-haiku-4-5-20251001", "claude-sonnet-5"),
-    "groq": ("llama-3.1-8b-instant", "llama-3.3-70b-versatile"),
+    # Groq's hosted-model catalog rotates faster than most providers' (models get
+    # deprecated/replaced); verified live against the account's actual /models list
+    # rather than assumed, since the previously-documented llama-3.x names had already
+    # been retired by the time this was tested end to end.
+    "groq": ("openai/gpt-oss-20b", "openai/gpt-oss-120b"),
 }
 
 

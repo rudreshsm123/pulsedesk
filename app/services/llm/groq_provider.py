@@ -21,7 +21,7 @@ _CLASSIFY_SYSTEM_PROMPT = (
 
 
 class GroqLLMProvider:
-    """Free-tier real LLM backend (Groq hosts open-weight models like Llama at no
+    """Free-tier real LLM backend (Groq hosts open-weight models, e.g. gpt-oss, at no
     cost for this kind of usage). Same contract as AnthropicLLMProvider: both methods
     raise on any failure so the existing callers' fallback/retry logic handles it --
     classify_ticket falls back to the rule-based classifier, generate_suggestion falls
