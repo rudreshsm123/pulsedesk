@@ -27,6 +27,10 @@ class Ticket(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("idx_tickets_sla_sweep", "status", "priority", "sla_deadline"),
         Index("idx_tickets_customer", "customer_id"),
         Index("idx_tickets_agent", "assigned_agent_id"),
+        # Supports keyset pagination's WHERE (created_at, id) < :cursor ORDER BY
+        # created_at DESC, id DESC (TicketRepository.list_paginated) as an index seek
+        # instead of a full scan+sort -- see docs/performance.md.
+        Index("idx_tickets_created_at_id", "created_at", "id"),
     )
 
     customer_id: Mapped[uuid.UUID] = mapped_column(
