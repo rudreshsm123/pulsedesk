@@ -21,6 +21,9 @@ from app.workers.classify import classify_ticket
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 logger = get_logger("pulsedesk.api.tickets")
 
+require_customer = require_role(UserRole.CUSTOMER)
+require_agent_or_admin = require_role(UserRole.AGENT, UserRole.ADMIN)
+
 
 def get_ticket_service(session: AsyncSession = Depends(get_db)) -> TicketService:
     return TicketService(TicketRepository(session), UserRepository(session))
@@ -35,7 +38,7 @@ def get_ticket_service(session: AsyncSession = Depends(get_db)) -> TicketService
 async def create_ticket(
     body: TicketCreate,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
-    user: User = Depends(require_role(UserRole.CUSTOMER)),
+    user: User = Depends(require_customer),
     ticket_service: TicketService = Depends(get_ticket_service),
 ) -> TicketOut:
     ticket = await ticket_service.create_ticket(
@@ -89,7 +92,7 @@ async def get_ticket(
 @router.get("/{ticket_id}/ai-suggestion", response_model=None)
 async def get_ai_suggestion(
     ticket_id: uuid.UUID,
-    user: User = Depends(require_role(UserRole.AGENT, UserRole.ADMIN)),
+    user: User = Depends(require_agent_or_admin),
     ticket_service: TicketService = Depends(get_ticket_service),
     session: AsyncSession = Depends(get_db),
 ) -> AISuggestionOut | JSONResponse:
@@ -109,7 +112,7 @@ async def get_ai_suggestion(
 async def assign_ticket(
     ticket_id: uuid.UUID,
     body: TicketAssignRequest,
-    user: User = Depends(require_role(UserRole.AGENT, UserRole.ADMIN)),
+    user: User = Depends(require_agent_or_admin),
     ticket_service: TicketService = Depends(get_ticket_service),
 ) -> TicketOut:
     ticket = await ticket_service.assign_ticket(ticket_id, body.agent_id, user)

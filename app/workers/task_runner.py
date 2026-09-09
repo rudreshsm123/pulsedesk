@@ -1,13 +1,10 @@
 import asyncio
 from collections.abc import Coroutine
-from typing import TypeVar
 
 from app.core.db import engine
 
-T = TypeVar("T")
 
-
-def run_task(coro: Coroutine[None, None, T]) -> T:
+def run_task[T](coro: Coroutine[None, None, T]) -> T:
     """Runs a worker coroutine to completion and disposes the DB engine's connection
     pool before the event loop closes.
 

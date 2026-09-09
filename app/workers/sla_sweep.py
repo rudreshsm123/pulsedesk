@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -20,7 +20,7 @@ def sweep_sla_breaches() -> int:
 
 
 async def _sweep_sla_breaches() -> int:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with AsyncSessionFactory() as session:
         # FOR UPDATE SKIP LOCKED: if a second beat/worker instance runs this concurrently

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import get_settings
 from app.core.enums import TicketPriority, TicketStatus, UserRole
@@ -37,7 +37,7 @@ class TicketService:
                     return existing
                 raise IdempotencyConflictError()
 
-        sla_deadline = datetime.now(timezone.utc) + timedelta(hours=settings.default_sla_hours)
+        sla_deadline = datetime.now(UTC) + timedelta(hours=settings.default_sla_hours)
         return await self._tickets.create(
             customer_id=customer_id,
             subject=subject,

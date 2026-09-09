@@ -15,7 +15,9 @@ from tests.fakes import FakeTicketRepository, FakeUserRepository
 
 
 def make_user(role: UserRole) -> User:
-    return User(id=uuid.uuid4(), email=f"{role.value}@example.com", hashed_password="x", role=role.value)
+    return User(
+        id=uuid.uuid4(), email=f"{role.value}@example.com", hashed_password="x", role=role.value
+    )
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -28,7 +28,7 @@ async def test_sweep_flags_overdue_open_tickets_and_leaves_others_alone(
         email=f"{uuid.uuid4()}@example.com", hashed_password="x", role="customer"
     )
     repo = TicketRepository(db_session)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     overdue = await repo.create(customer.id, "Overdue", "Body", None, now - timedelta(hours=1))
     not_due_yet = await repo.create(customer.id, "Not due", "Body", None, now + timedelta(hours=1))

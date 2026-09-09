@@ -17,6 +17,8 @@ from app.workers.kb_index import index_kb_article
 router = APIRouter(prefix="/kb-articles", tags=["kb-articles"])
 logger = get_logger("pulsedesk.api.kb_articles")
 
+require_admin = require_role(UserRole.ADMIN)
+
 
 def get_kb_service(session: AsyncSession = Depends(get_db)) -> KBService:
     return KBService(
@@ -27,7 +29,7 @@ def get_kb_service(session: AsyncSession = Depends(get_db)) -> KBService:
 @router.post("", response_model=KBArticleOut, status_code=status.HTTP_201_CREATED)
 async def create_kb_article(
     body: KBArticleCreate,
-    _admin=Depends(require_role(UserRole.ADMIN)),
+    _admin=Depends(require_admin),
     kb_service: KBService = Depends(get_kb_service),
 ) -> KBArticleOut:
     article = await kb_service.create_article(body.title, body.body)
@@ -44,7 +46,7 @@ async def create_kb_article(
 
 @router.get("", response_model=list[KBArticleOut])
 async def list_kb_articles(
-    _admin=Depends(require_role(UserRole.ADMIN)),
+    _admin=Depends(require_admin),
     session: AsyncSession = Depends(get_db),
 ) -> list[KBArticleOut]:
     articles = await KBArticleRepository(session).list_all()
@@ -54,7 +56,7 @@ async def list_kb_articles(
 @router.get("/{article_id}", response_model=KBArticleOut)
 async def get_kb_article(
     article_id: uuid.UUID,
-    _admin=Depends(require_role(UserRole.ADMIN)),
+    _admin=Depends(require_admin),
     session: AsyncSession = Depends(get_db),
 ) -> KBArticleOut:
     article = await KBArticleRepository(session).get_by_id(article_id)

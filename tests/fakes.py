@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.enums import TicketStatus
 from app.models.ticket import Ticket
@@ -54,8 +54,8 @@ class FakeTicketRepository:
             idempotency_key=idempotency_key,
             sla_deadline=sla_deadline,
             status=TicketStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         self._tickets[ticket.id] = ticket
         return ticket
