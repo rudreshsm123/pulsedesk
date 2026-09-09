@@ -5,7 +5,7 @@ from app.core.enums import TicketStatus
 from app.core.logging import get_logger
 from app.repositories.ticket_repository import TicketRepository
 from app.services.classification import classify_ticket_text
-from app.services.llm.mock_provider import get_llm_provider
+from app.services.llm.factory import get_llm_provider
 from app.workers.celery_app import celery_app
 from app.workers.task_runner import run_task
 

@@ -36,8 +36,8 @@ a deliberate decision, not an oversight.
 ## Prompt injection (the RAG-specific risk)
 
 Ticket text is user-controlled and flows into an LLM prompt (`build_grounded_prompt` in
-`app/services/llm/mock_provider.py`). It is treated as **untrusted data**, not as
-instructions:
+`app/services/llm/base.py`, shared by every `LLMProvider` implementation). It is
+treated as **untrusted data**, not as instructions:
 
 - The ticket text is wrapped in an explicit `<ticket>...</ticket>` delimiter inside the
   prompt template, with an instruction that its contents are data to summarize/ground a

@@ -46,17 +46,21 @@ has passed as `BREACHED`.
 | **PostgreSQL + pgvector** | Tickets/users/KB articles are relational with real integrity constraints (idempotency uniqueness, FK cascades) — a second vector database would be complexity for its own sake at this data scale, when pgvector gives RAG support on the same instance. |
 | **Redis + Celery** | Ticket classification and RAG generation are too slow to run inside the request; Celery also backs the rate limiter's token buckets. |
 | **HNSW over ivfflat** for the KB embedding index | See "bugs found," below — ivfflat trains its clusters at index-creation time and silently returns near-zero recall until it's been rebuilt against a non-trivial amount of data; HNSW builds incrementally and is correct from the first inserted row. |
-| **A swappable `LLMProvider` interface, mock by default** | No LLM API key was available while building this. Classification and resolution-drafting are behind `app/services/llm/`, with a deterministic, zero-cost implementation (rule-based classification; extractive-only, threshold-gated resolution drafting) that's structurally incapable of hallucinating, since it never generates text beyond what's in the retrieved KB chunk. Swapping in a real provider is a matter of implementing the same interface. |
+| **A swappable `LLMProvider` interface, mock by default** | Classification and resolution-drafting are behind `app/services/llm/`. `MockLLMProvider` is deterministic and zero-cost (rule-based classification; extractive-only, threshold-gated resolution drafting) — structurally incapable of hallucinating, since it never generates text beyond what's in the retrieved KB chunk. `AnthropicLLMProvider` implements the same interface for a real model; switch via `LLM_PROVIDER=anthropic` + `LLM_API_KEY`. |
 | **PyJWT, not python-jose** | `pip-audit` flagged `ecdsa` (a python-jose dependency with no available fix) as vulnerable; since the app only signs with HS256, PyJWT was a strictly better choice, not a suppressed finding. |
 | **Keyset pagination, not OFFSET** | Measured, not assumed — see `docs/performance.md`. |
 
 ## What's deliberately not here
 
-- **A real LLM call.** Wired up as an interface (`app/services/llm/base.py`) with a
-  provider selectable via `LLM_PROVIDER`; only `mock` is implemented, since no API key
-  was available. The mock is extractive-only and threshold-gated specifically so this
-  isn't a "pretend it works" stub — it produces genuinely grounded output or an honest
-  "not enough information," never a fabricated answer.
+- **A real LLM call, by default.** `app/services/llm/` defines the provider interface;
+  `MockLLMProvider` (default, `LLM_PROVIDER=mock`) is extractive-only and
+  threshold-gated, so it's not a "pretend it works" stub — it produces genuinely
+  grounded output or an honest "not enough information," never a fabricated answer.
+  `AnthropicLLMProvider` (`LLM_PROVIDER=anthropic` + `LLM_API_KEY`) is implemented and
+  tested (with the client mocked, so tests need no key/network) but wasn't the default
+  since building this didn't start with an API key available. Both backends share the
+  same similarity threshold and grounded-prompt template, so grounding is a property of
+  the pipeline, not something a real model could be prompted out of.
 - **A dedicated vector database (Pinecone/Weaviate).** pgvector on the existing
   Postgres instance is the right-sized choice at this data volume.
 - **Kafka, microservices, Kubernetes.** Redis+Celery already demonstrates queueing;

@@ -7,7 +7,7 @@ from app.repositories.kb_repository import KBChunkRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.services.embeddings import get_embedding_provider
 from app.services.llm.base import RetrievedChunk
-from app.services.llm.mock_provider import get_llm_provider
+from app.services.llm.factory import get_llm_provider
 from app.workers.celery_app import celery_app
 from app.workers.task_runner import run_task
 

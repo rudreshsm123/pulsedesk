@@ -1,13 +1,13 @@
 import uuid
 
 from app.core.enums import TicketPriority
-from app.services.llm.base import RetrievedChunk
-from app.services.llm.mock_provider import (
-    _NO_GROUNDING_REPLY,
-    _SIMILARITY_THRESHOLD,
-    MockLLMProvider,
+from app.services.llm.base import (
+    NO_GROUNDING_REPLY,
+    SIMILARITY_THRESHOLD,
+    RetrievedChunk,
     build_grounded_prompt,
 )
+from app.services.llm.mock_provider import MockLLMProvider
 
 
 def test_classify_delegates_to_rule_based_classifier():
@@ -24,7 +24,7 @@ def test_generate_resolution_returns_no_grounding_reply_when_no_chunks():
 
     draft = provider.generate_resolution("How do I reset my password?", [])
 
-    assert draft.reply_text == _NO_GROUNDING_REPLY
+    assert draft.reply_text == NO_GROUNDING_REPLY
     assert draft.source_article_ids == []
 
 
@@ -33,12 +33,12 @@ def test_generate_resolution_ignores_chunks_below_similarity_threshold():
     weak_chunk = RetrievedChunk(
         article_id=uuid.uuid4(),
         chunk_text="Unrelated content",
-        similarity=_SIMILARITY_THRESHOLD - 0.01,
+        similarity=SIMILARITY_THRESHOLD - 0.01,
     )
 
     draft = provider.generate_resolution("ticket text", [weak_chunk])
 
-    assert draft.reply_text == _NO_GROUNDING_REPLY
+    assert draft.reply_text == NO_GROUNDING_REPLY
     assert draft.source_article_ids == []
 
 
@@ -48,7 +48,7 @@ def test_generate_resolution_grounds_reply_in_matching_chunk():
     chunk = RetrievedChunk(
         article_id=article_id,
         chunk_text="To reset your password, go to Settings > Security > Reset Password.",
-        similarity=_SIMILARITY_THRESHOLD + 0.1,
+        similarity=SIMILARITY_THRESHOLD + 0.1,
     )
 
     draft = provider.generate_resolution("How do I reset my password?", [chunk])
