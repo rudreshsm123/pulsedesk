@@ -58,7 +58,10 @@ if not tickets:
     st.info("No tickets to show yet.")
 
 for ticket in tickets:
-    with st.container(border=True, key=f"ticket-card-{ticket['id']}"):
+    priority_slug = (ticket["priority"] or "none").lower()
+    with st.container(
+        border=True, key=f"ticket-card-{priority_slug}-{ticket['id']}"
+    ):
         with st.container(horizontal=True, vertical_alignment="center"):
             st.markdown(f"**{ticket['subject']}**")
             st.badge(ticket["status"], color=STATUS_COLORS.get(ticket["status"], "gray"))

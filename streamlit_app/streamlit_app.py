@@ -10,12 +10,37 @@ st.session_state.setdefault("role", None)
 st.session_state.setdefault("email", None)
 
 if not st.session_state.access_token:
-    _, center, _ = st.columns([1, 1.2, 1])
-    with center:
-        st.title("PulseDesk", icon=":material/support_agent:")
-        st.caption(
-            "AI-augmented support ticket triage. Sign in or create an account to continue."
+    hero_col, form_col = st.columns([1.1, 1], gap="large")
+
+    with hero_col:
+        st.html(
+            """
+            <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #DB2777 100%);
+                        border-radius: 16px; padding: 3rem 2.5rem; min-height: 520px;
+                        display: flex; flex-direction: column; justify-content: center;
+                        color: white; font-family: 'Inter', sans-serif;">
+                <div style="font-size: 2.25rem; font-weight: 700; margin-bottom: 0.75rem;">
+                    PulseDesk
+                </div>
+                <div style="font-size: 1.05rem; opacity: 0.92; margin-bottom: 2.5rem;
+                            max-width: 420px; line-height: 1.5;">
+                    AI-augmented support ticket triage. Tickets get classified, matched
+                    against your knowledge base, and drafted a grounded reply -- while a
+                    human always reviews before anything reaches a customer.
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1.1rem;
+                            font-size: 0.95rem;">
+                    <div>&#9889; Tickets auto-classified by category &amp; priority in seconds</div>
+                    <div>&#129504; RAG-grounded reply drafts from your own knowledge base</div>
+                    <div>&#128202; Real-time SLA tracking and a team dashboard</div>
+                </div>
+            </div>
+            """
         )
+
+    with form_col:
+        st.subheader("Welcome back")
+        st.caption("Sign in or create an account to continue.")
 
         sign_in_tab, create_account_tab = st.tabs(["Sign in", "Create account"])
 
@@ -79,6 +104,17 @@ if st.session_state.role == "admin":
     )
 
 with st.sidebar:
+    st.html(
+        """
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+            <div style="width:28px; height:28px; border-radius:8px;
+                        background: linear-gradient(135deg, #4F46E5, #DB2777);
+                        display:flex; align-items:center; justify-content:center;
+                        color:white; font-weight:700; font-size:0.8rem;">PD</div>
+            <div style="font-weight:700; font-size:1.05rem;">PulseDesk</div>
+        </div>
+        """
+    )
     st.caption(f"Signed in as **{st.session_state.email}**")
     st.badge(st.session_state.role, color="violet")
     if st.button("Sign out", icon=":material/logout:"):

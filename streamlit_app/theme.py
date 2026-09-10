@@ -17,12 +17,17 @@ _CSS = """
 
 div[class*="st-key-ticket-card-"] {
     transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    border-left-width: 4px !important;
 }
 div[class*="st-key-ticket-card-"]:hover {
     box-shadow: 0 6px 20px rgba(24, 24, 27, 0.10);
     transform: translateY(-2px);
-    border-color: #A1A1AA;
 }
+div[class*="st-key-ticket-card-low-"] { border-left-color: #A1A1AA !important; }
+div[class*="st-key-ticket-card-medium-"] { border-left-color: #3B82F6 !important; }
+div[class*="st-key-ticket-card-high-"] { border-left-color: #F97316 !important; }
+div[class*="st-key-ticket-card-urgent-"] { border-left-color: #EF4444 !important; }
+div[class*="st-key-ticket-card-none-"] { border-left-color: #E4E4E7 !important; }
 
 div[class*="st-key-kpi-"] {
     transition: box-shadow 0.2s ease, transform 0.2s ease;
