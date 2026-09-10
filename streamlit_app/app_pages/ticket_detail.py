@@ -48,20 +48,24 @@ if st.session_state.role in ("agent", "admin"):
 
     st.divider()
     st.subheader("Assign", divider=False)
-    with st.form("assign_form", border=False):
-        agent_id = st.text_input(
-            "Agent user ID",
-            help="No agent directory in this UI yet -- paste an agent's user ID "
-            "(see the users table).",
-        )
-        submitted = st.form_submit_button("Assign", icon=":material/assignment_ind:")
-    if submitted:
-        if not agent_id:
-            st.warning("Enter an agent ID first.")
-        else:
+    try:
+        agents = api_client.list_agents(st.session_state.access_token)
+    except api_client.APIError as exc:
+        st.error(f"Could not load agents: {exc.detail}")
+        agents = []
+
+    if not agents:
+        st.caption("No agent accounts exist yet.")
+    else:
+        agent_emails = [a["email"] for a in agents]
+        with st.form("assign_form", border=False):
+            selected_email = st.selectbox("Agent", agent_emails)
+            submitted = st.form_submit_button("Assign", icon=":material/assignment_ind:")
+        if submitted:
+            agent_id = next(a["id"] for a in agents if a["email"] == selected_email)
             try:
                 api_client.assign_ticket(st.session_state.access_token, ticket_id, agent_id)
-                st.success("Ticket assigned.")
+                st.success(f"Ticket assigned to {selected_email}.")
                 st.rerun()
             except api_client.APIError as exc:
                 st.error(f"Could not assign ticket: {exc.detail}")

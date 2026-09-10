@@ -95,6 +95,12 @@ def get_ai_suggestion(access_token: str, ticket_id: str) -> tuple[int, dict]:
     return response.status_code, _handle(response)
 
 
+def list_agents(access_token: str) -> list[dict]:
+    return _handle(
+        requests.get(f"{API_BASE_URL}/users/agents", headers=_auth_headers(access_token))
+    )
+
+
 def assign_ticket(access_token: str, ticket_id: str, agent_id: str) -> dict:
     return _handle(
         requests.patch(

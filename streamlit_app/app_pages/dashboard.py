@@ -26,7 +26,8 @@ with st.container(horizontal=True):
         st.metric("Open", open_count)
     with st.container(border=True, key="kpi-resolved"):
         st.metric("Resolved", resolved_count)
-    with st.container(border=True, key="kpi-breached"):
+    breached_key = "kpi-breached-alert" if breached_count > 0 else "kpi-breached"
+    with st.container(border=True, key=breached_key):
         st.metric(
             "Breached SLA",
             breached_count,

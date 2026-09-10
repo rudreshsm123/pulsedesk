@@ -42,6 +42,17 @@ div[class*="st-key-kpi-"]:hover {
 .st-key-kpi-resolved { border-top-color: #22C55E !important; }
 .st-key-kpi-breached { border-top-color: #EF4444 !important; }
 
+/* Only applied when the breached count is actually > 0 (see dashboard.py) -- a
+   pulsing alert card for a metric at zero would just be visual noise. */
+@keyframes pd-pulse-alert {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+.st-key-kpi-breached-alert {
+    border-top-color: #EF4444 !important;
+    animation: pd-pulse-alert 2s ease-in-out infinite;
+}
+
 [data-testid^="stBaseButton"] {
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

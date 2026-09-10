@@ -24,3 +24,9 @@ class UserRepository:
         await self._session.flush()
         await self._session.refresh(user)
         return user
+
+    async def list_by_role(self, role: str) -> list[User]:
+        result = await self._session.execute(
+            select(User).where(User.role == role).order_by(User.email)
+        )
+        return list(result.scalars().all())
