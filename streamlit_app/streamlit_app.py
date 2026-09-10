@@ -1,7 +1,9 @@
 import api_client
 import streamlit as st
+from theme import inject_custom_css
 
 st.set_page_config(page_title="PulseDesk", page_icon=":material/support_agent:", layout="wide")
+inject_custom_css()
 
 st.session_state.setdefault("access_token", None)
 st.session_state.setdefault("role", None)

@@ -20,15 +20,18 @@ resolved_count = by_status.get("RESOLVED", 0)
 breached_count = by_status.get("BREACHED", 0)
 
 with st.container(horizontal=True):
-    st.metric("Total tickets", analytics["total_tickets"], border=True)
-    st.metric("Open", open_count, border=True)
-    st.metric("Resolved", resolved_count, border=True)
-    st.metric(
-        "Breached SLA",
-        breached_count,
-        border=True,
-        help="Tickets whose SLA deadline passed before resolution.",
-    )
+    with st.container(border=True, key="kpi-total"):
+        st.metric("Total tickets", analytics["total_tickets"])
+    with st.container(border=True, key="kpi-open"):
+        st.metric("Open", open_count)
+    with st.container(border=True, key="kpi-resolved"):
+        st.metric("Resolved", resolved_count)
+    with st.container(border=True, key="kpi-breached"):
+        st.metric(
+            "Breached SLA",
+            breached_count,
+            help="Tickets whose SLA deadline passed before resolution.",
+        )
 if breached_count > 0:
     st.warning(f"{breached_count} ticket(s) have breached their SLA and need attention.")
 
