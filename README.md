@@ -127,9 +127,44 @@ pytest                 # unit + API tests (no DB needed) + integration tests
 ruff check .            # lint
 ```
 
-67 tests: unit tests mock out the DB via fakes (`tests/fakes.py`); integration tests
+92 tests: unit tests mock out the DB via fakes (`tests/fakes.py`); integration tests
 run against a real, ephemeral Postgres+pgvector container per test session, not mocks
 — see `docs/security.md` for the mock-vs-real rationale.
+
+### Deploying it live
+
+Two independent deployments, both free:
+
+**1. Database (Supabase) and broker (Upstash) -- do these first:**
+1. Create a free project at `supabase.com`. In the SQL editor, run `create extension vector;`
+   (pgvector ships with Supabase, this just turns it on).
+2. Supabase dashboard -> Connect -> copy the **Session pooler** connection string
+   (port 5432), and change its scheme from `postgresql://` to `postgresql+asyncpg://`.
+3. Create a free database at `upstash.com` (Redis). Copy its connection string
+   (`rediss://...`).
+
+**2. Backend (Render), using the committed `render.yaml`:**
+1. Push this repo to your own GitHub account.
+2. On `render.com`, **New -> Blueprint**, point it at your repo. Render reads
+   `render.yaml` and provisions three services (api, worker, beat) automatically.
+3. Before the first deploy succeeds, open the `pulsedesk-shared` env var group Render
+   created and fill in the three `sync: false` values: `DATABASE_URL` (from Supabase),
+   `REDIS_URL` (from Upstash), and `LLM_API_KEY` (from `console.groq.com`).
+4. Once `pulsedesk-api` is live, note its URL (`https://pulsedesk-api-xxxx.onrender.com`).
+
+**3. Frontend (Streamlit Community Cloud):**
+1. On `share.streamlit.io`, **New app**, point it at your repo,
+   main file path `streamlit_app/streamlit_app.py`.
+2. In the app's **Settings -> Secrets**, add:
+   ```toml
+   PULSEDESK_API_URL = "https://pulsedesk-api-xxxx.onrender.com/api/v1"
+   ```
+   (`api_client.py` reads this as an environment variable, so this is the only
+   config needed to point the UI at your live backend instead of localhost.)
+3. Deploy. This URL is the one to actually share/put on LinkedIn.
+
+Render's free tier spins down after inactivity (the first request after a while takes
+~30-60s to wake it back up) -- expected on a $0 deployment, not a bug.
 
 ## API surface
 

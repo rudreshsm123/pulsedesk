@@ -4,8 +4,25 @@ import os
 import uuid
 
 import requests
+import streamlit as st
 
-API_BASE_URL = os.environ.get("PULSEDESK_API_URL", "http://localhost:8000/api/v1")
+
+def _resolve_api_base_url() -> str:
+    # Local/Docker runs set this as a real environment variable; Streamlit Community
+    # Cloud's "Secrets" UI only populates st.secrets, not os.environ, so both are
+    # checked -- os.environ first since it's the more common path (Docker, local dev).
+    if "PULSEDESK_API_URL" in os.environ:
+        return os.environ["PULSEDESK_API_URL"]
+    try:
+        return st.secrets.get("PULSEDESK_API_URL", "http://localhost:8000/api/v1")
+    except Exception:
+        # st.secrets raises StreamlitSecretNotFoundError (not a plain KeyError) when no
+        # secrets.toml exists at all -- the normal case for local/Docker runs, which
+        # already returned above via os.environ if that var was set there instead.
+        return "http://localhost:8000/api/v1"
+
+
+API_BASE_URL = _resolve_api_base_url()
 
 
 class APIError(Exception):
