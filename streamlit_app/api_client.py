@@ -31,15 +31,22 @@ def _auth_headers(access_token: str) -> dict:
     return {"Authorization": f"Bearer {access_token}"}
 
 
-def decode_role_from_token(access_token: str) -> str:
+def _decode_token_payload(access_token: str) -> dict:
     """Decodes the JWT payload client-side (no signature verification) purely to pick
     what UI to show. This is not a security boundary: the API independently enforces
     real authorization on every request, so a tampered token here could only ever
     change which buttons render locally, never what the backend actually allows."""
     payload_segment = access_token.split(".")[1]
     padded = payload_segment + "=" * (-len(payload_segment) % 4)
-    payload = json.loads(base64.urlsafe_b64decode(padded))
-    return payload["role"]
+    return json.loads(base64.urlsafe_b64decode(padded))
+
+
+def decode_role_from_token(access_token: str) -> str:
+    return _decode_token_payload(access_token)["role"]
+
+
+def decode_user_id_from_token(access_token: str) -> str:
+    return _decode_token_payload(access_token)["sub"]
 
 
 def register(email: str, password: str) -> dict:
@@ -93,6 +100,36 @@ def assign_ticket(access_token: str, ticket_id: str, agent_id: str) -> dict:
         requests.patch(
             f"{API_BASE_URL}/tickets/{ticket_id}/assign",
             json={"agent_id": agent_id},
+            headers=_auth_headers(access_token),
+        )
+    )
+
+
+def update_ticket_status(access_token: str, ticket_id: str, new_status: str) -> dict:
+    return _handle(
+        requests.patch(
+            f"{API_BASE_URL}/tickets/{ticket_id}/status",
+            json={"status": new_status},
+            headers=_auth_headers(access_token),
+        )
+    )
+
+
+def list_ticket_comments(access_token: str, ticket_id: str) -> list[dict]:
+    return _handle(
+        requests.get(
+            f"{API_BASE_URL}/tickets/{ticket_id}/comments", headers=_auth_headers(access_token)
+        )
+    )
+
+
+def create_ticket_comment(
+    access_token: str, ticket_id: str, body: str, is_internal: bool
+) -> dict:
+    return _handle(
+        requests.post(
+            f"{API_BASE_URL}/tickets/{ticket_id}/comments",
+            json={"body": body, "is_internal": is_internal},
             headers=_auth_headers(access_token),
         )
     )

@@ -34,6 +34,9 @@ if not st.session_state.access_token:
                     st.session_state.role = api_client.decode_role_from_token(
                         tokens["access_token"]
                     )
+                    st.session_state.user_id = api_client.decode_user_id_from_token(
+                        tokens["access_token"]
+                    )
                     st.session_state.email = email
                     st.rerun()
                 except api_client.APIError as exc:

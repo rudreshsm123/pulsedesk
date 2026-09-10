@@ -11,7 +11,7 @@ from app.core.exceptions import (
 )
 from app.models.user import User
 from app.services.ticket_service import TicketService
-from tests.fakes import FakeTicketRepository, FakeUserRepository
+from tests.fakes import FakeTicketCommentRepository, FakeTicketRepository, FakeUserRepository
 
 
 def make_user(role: UserRole) -> User:
@@ -27,7 +27,7 @@ def user_repo() -> FakeUserRepository:
 
 @pytest.fixture
 def ticket_service(user_repo: FakeUserRepository) -> TicketService:
-    return TicketService(FakeTicketRepository(), user_repo)
+    return TicketService(FakeTicketRepository(), user_repo, FakeTicketCommentRepository())
 
 
 @pytest.mark.asyncio
@@ -168,3 +168,104 @@ async def test_cannot_assign_resolved_ticket(
 
     with pytest.raises(InvalidStateTransitionError):
         await ticket_service.assign_ticket(ticket.id, agent.id, admin)
+
+
+@pytest.mark.asyncio
+async def test_update_status_to_in_progress_from_classified(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+    ticket.status = TicketStatus.CLASSIFIED
+
+    updated = await ticket_service.update_status(ticket.id, TicketStatus.IN_PROGRESS, agent)
+
+    assert updated.status == TicketStatus.IN_PROGRESS
+
+
+@pytest.mark.asyncio
+async def test_cannot_reopen_a_resolved_ticket(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+    ticket.status = TicketStatus.RESOLVED
+
+    with pytest.raises(InvalidStateTransitionError):
+        await ticket_service.update_status(ticket.id, TicketStatus.IN_PROGRESS, agent)
+
+
+@pytest.mark.asyncio
+async def test_cannot_manually_set_status_to_pending(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+
+    with pytest.raises(InvalidStateTransitionError):
+        await ticket_service.update_status(ticket.id, TicketStatus.PENDING, agent)
+
+
+@pytest.mark.asyncio
+async def test_customer_can_comment_on_own_ticket(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+
+    comment = await ticket_service.add_comment(ticket.id, owner, "Any update?", False)
+
+    assert comment.body == "Any update?"
+    assert comment.is_internal is False
+
+
+@pytest.mark.asyncio
+async def test_customer_cannot_post_internal_note(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+
+    with pytest.raises(UnauthorizedActionError):
+        await ticket_service.add_comment(ticket.id, owner, "Sneaky internal note", True)
+
+
+@pytest.mark.asyncio
+async def test_customer_cannot_comment_on_others_ticket(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    stranger = make_user(UserRole.CUSTOMER)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+
+    with pytest.raises(UnauthorizedActionError):
+        await ticket_service.add_comment(ticket.id, stranger, "Not my ticket", False)
+
+
+@pytest.mark.asyncio
+async def test_agent_can_post_internal_note(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+
+    comment = await ticket_service.add_comment(ticket.id, agent, "Internal context", True)
+
+    assert comment.is_internal is True
+
+
+@pytest.mark.asyncio
+async def test_customer_does_not_see_internal_notes(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+    await ticket_service.add_comment(ticket.id, agent, "Internal note", True)
+    await ticket_service.add_comment(ticket.id, agent, "Customer-facing reply", False)
+
+    comments = await ticket_service.list_comments(ticket.id, owner)
+
+    assert len(comments) == 1
+    assert comments[0].body == "Customer-facing reply"
+
+
+@pytest.mark.asyncio
+async def test_agent_sees_all_comments_including_internal(ticket_service: TicketService):
+    owner = make_user(UserRole.CUSTOMER)
+    agent = make_user(UserRole.AGENT)
+    ticket = await ticket_service.create_ticket(owner.id, "Subject", "Body", None)
+    await ticket_service.add_comment(ticket.id, agent, "Internal note", True)
+    await ticket_service.add_comment(ticket.id, agent, "Customer-facing reply", False)
+
+    comments = await ticket_service.list_comments(ticket.id, agent)
+
+    assert len(comments) == 2

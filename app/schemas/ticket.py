@@ -42,3 +42,23 @@ class TicketAnalyticsOut(BaseModel):
     by_status: dict[str, int]
     by_priority: dict[str, int]
     by_category: dict[str, int]
+
+
+class TicketStatusUpdateRequest(BaseModel):
+    status: TicketStatus
+
+
+class TicketCommentCreate(BaseModel):
+    body: str = Field(min_length=1)
+    is_internal: bool = False
+
+
+class TicketCommentOut(BaseModel):
+    id: uuid.UUID
+    ticket_id: uuid.UUID
+    author_id: uuid.UUID
+    body: str
+    is_internal: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

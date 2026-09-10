@@ -65,3 +65,65 @@ if st.session_state.role in ("agent", "admin"):
                 st.rerun()
             except api_client.APIError as exc:
                 st.error(f"Could not assign ticket: {exc.detail}")
+
+    st.divider()
+    st.subheader("Resolution", divider=False)
+    with st.container(horizontal=True):
+        if st.button("Mark in progress", icon=":material/play_circle:"):
+            try:
+                api_client.update_ticket_status(
+                    st.session_state.access_token, ticket_id, "IN_PROGRESS"
+                )
+                st.rerun()
+            except api_client.APIError as exc:
+                st.error(f"Could not update status: {exc.detail}")
+        if st.button("Mark resolved", icon=":material/check_circle:", type="primary"):
+            try:
+                api_client.update_ticket_status(
+                    st.session_state.access_token, ticket_id, "RESOLVED"
+                )
+                st.rerun()
+            except api_client.APIError as exc:
+                st.error(f"Could not update status: {exc.detail}")
+
+st.divider()
+st.subheader("Conversation", icon=":material/forum:")
+
+try:
+    comments = api_client.list_ticket_comments(st.session_state.access_token, ticket_id)
+except api_client.APIError as exc:
+    st.error(f"Could not load conversation: {exc.detail}")
+    comments = []
+
+if not comments:
+    st.caption("No messages yet.")
+
+my_user_id = st.session_state.get("user_id")
+for comment in comments:
+    is_mine = comment["author_id"] == my_user_id
+    if comment["is_internal"]:
+        label, avatar = "Internal note", ":material/lock:"
+    elif is_mine:
+        label, avatar = "You", ":material/person:"
+    else:
+        label, avatar = "Reply", ":material/support_agent:"
+
+    with st.chat_message(label, avatar=avatar):
+        if comment["is_internal"]:
+            st.badge("Staff only", color="gray")
+        st.write(comment["body"])
+        st.caption(comment["created_at"])
+
+if st.session_state.role in ("agent", "admin"):
+    post_internal = st.checkbox("Post as internal note (not visible to the customer)")
+else:
+    post_internal = False
+
+if reply := st.chat_input("Write a reply..."):
+    try:
+        api_client.create_ticket_comment(
+            st.session_state.access_token, ticket_id, reply, post_internal
+        )
+        st.rerun()
+    except api_client.APIError as exc:
+        st.error(f"Could not post reply: {exc.detail}")

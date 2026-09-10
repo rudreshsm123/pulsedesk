@@ -81,6 +81,12 @@ class TicketRepository:
 
     async def assign_agent(self, ticket: Ticket, agent_id: uuid.UUID) -> Ticket:
         ticket.assigned_agent_id = agent_id
+        return await self.save(ticket)
+
+    async def save(self, ticket: Ticket) -> Ticket:
+        """Flushes pending changes on an already-tracked ticket and refreshes it so
+        server-computed columns (updated_at's onupdate=func.now()) are current before
+        the caller serializes the response."""
         await self._session.flush()
         await self._session.refresh(ticket)
         return ticket

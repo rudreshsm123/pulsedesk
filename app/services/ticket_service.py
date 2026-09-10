@@ -10,18 +10,45 @@ from app.core.exceptions import (
     UnauthorizedActionError,
 )
 from app.core.pagination import decode_cursor, encode_cursor
-from app.models.ticket import Ticket
+from app.models.ticket import Ticket, TicketComment
 from app.models.user import User
+from app.repositories.ticket_comment_repository import TicketCommentRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 
 settings = get_settings()
 
+# Which statuses a human can manually transition a ticket *into*, and which statuses
+# it's valid to transition *from*. PENDING/CLASSIFIED/BREACHED are never manual
+# targets -- PENDING/CLASSIFIED are system-assigned by the classify worker, BREACHED is
+# system-assigned by the SLA sweep. RESOLVED is a terminal state (no reopening) --
+# consistent with assign_ticket's existing "can't assign a resolved/breached ticket"
+# rule below.
+_ALLOWED_MANUAL_TRANSITIONS: dict[TicketStatus, set[TicketStatus]] = {
+    TicketStatus.IN_PROGRESS: {
+        TicketStatus.PENDING,
+        TicketStatus.CLASSIFIED,
+        TicketStatus.BREACHED,
+    },
+    TicketStatus.RESOLVED: {
+        TicketStatus.PENDING,
+        TicketStatus.CLASSIFIED,
+        TicketStatus.IN_PROGRESS,
+        TicketStatus.BREACHED,
+    },
+}
+
 
 class TicketService:
-    def __init__(self, ticket_repository: TicketRepository, user_repository: UserRepository):
+    def __init__(
+        self,
+        ticket_repository: TicketRepository,
+        user_repository: UserRepository,
+        comment_repository: TicketCommentRepository,
+    ):
         self._tickets = ticket_repository
         self._users = user_repository
+        self._comments = comment_repository
 
     async def create_ticket(
         self,
@@ -101,6 +128,48 @@ class TicketService:
             raise NotFoundError("Agent", str(agent_id))
 
         return await self._tickets.assign_agent(ticket, agent_id)
+
+    async def update_status(
+        self, ticket_id: uuid.UUID, new_status: TicketStatus, acting_user: User
+    ) -> Ticket:
+        ticket = await self._tickets.get_by_id(ticket_id)
+        if ticket is None:
+            raise NotFoundError("Ticket", str(ticket_id))
+
+        allowed_from = _ALLOWED_MANUAL_TRANSITIONS.get(new_status)
+        if allowed_from is None or TicketStatus(ticket.status) not in allowed_from:
+            raise InvalidStateTransitionError(
+                f"Cannot transition a ticket from {ticket.status} to {new_status}"
+            )
+
+        ticket.status = new_status
+        return await self._tickets.save(ticket)
+
+    async def add_comment(
+        self, ticket_id: uuid.UUID, author: User, body: str, is_internal: bool
+    ) -> TicketComment:
+        ticket = await self._tickets.get_by_id(ticket_id)
+        if ticket is None:
+            raise NotFoundError("Ticket", str(ticket_id))
+
+        self._authorize_view(ticket, author)
+
+        if is_internal and UserRole(author.role) == UserRole.CUSTOMER:
+            raise UnauthorizedActionError("Customers cannot post internal notes")
+
+        return await self._comments.create(ticket_id, author.id, body, is_internal)
+
+    async def list_comments(self, ticket_id: uuid.UUID, user: User) -> list[TicketComment]:
+        ticket = await self._tickets.get_by_id(ticket_id)
+        if ticket is None:
+            raise NotFoundError("Ticket", str(ticket_id))
+
+        self._authorize_view(ticket, user)
+
+        comments = await self._comments.list_by_ticket(ticket_id)
+        if UserRole(user.role) == UserRole.CUSTOMER:
+            comments = [c for c in comments if not c.is_internal]
+        return comments
 
     @staticmethod
     def _authorize_view(ticket: Ticket, user: User) -> None:

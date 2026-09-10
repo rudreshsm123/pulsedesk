@@ -143,6 +143,9 @@ endpoints:
 | `GET /tickets` | any | RBAC-scoped server-side: customers see only their own tickets. |
 | `GET /tickets/{id}/ai-suggestion` | agent/admin | `200` with the grounded draft + source article IDs, or `202` while still generating. |
 | `PATCH /tickets/{id}/assign` | agent/admin | `409` if the ticket is already resolved/breached. |
+| `PATCH /tickets/{id}/status` | agent/admin | Manual `IN_PROGRESS`/`RESOLVED` transitions; `409` on an invalid transition (e.g. reopening a resolved ticket). |
+| `POST /tickets/{id}/comments`, `GET /tickets/{id}/comments` | any (view-scoped) | The actual conversation thread. `is_internal` notes are agent/admin-only to write and are filtered out of a customer's own feed server-side, not just hidden in the UI. |
+| `GET /tickets/analytics/sla` | admin | Ticket counts grouped by status/priority/category (real SQL aggregation, not client-side counting). |
 | `POST /kb-articles` | admin | Triggers async chunking + embedding. |
 | `GET /health`, `GET /metrics` | — | Liveness + Prometheus-format metrics. |
 

@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from app.core.enums import TicketStatus
-from app.models.ticket import Ticket
+from app.models.ticket import Ticket, TicketComment
 from app.models.user import User
 
 
@@ -85,7 +85,32 @@ class FakeTicketRepository:
 
     async def assign_agent(self, ticket: Ticket, agent_id: uuid.UUID) -> Ticket:
         ticket.assigned_agent_id = agent_id
+        return await self.save(ticket)
+
+    async def save(self, ticket: Ticket) -> Ticket:
         return ticket
 
     def seed(self, ticket: Ticket) -> None:
         self._tickets[ticket.id] = ticket
+
+
+class FakeTicketCommentRepository:
+    """In-memory stand-in for TicketCommentRepository."""
+
+    def __init__(self):
+        self._comments: list = []
+
+    async def create(self, ticket_id, author_id, body, is_internal):
+        comment = TicketComment(
+            id=uuid.uuid4(),
+            ticket_id=ticket_id,
+            author_id=author_id,
+            body=body,
+            is_internal=is_internal,
+            created_at=datetime.now(UTC),
+        )
+        self._comments.append(comment)
+        return comment
+
+    async def list_by_ticket(self, ticket_id):
+        return [c for c in self._comments if c.ticket_id == ticket_id]

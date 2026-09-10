@@ -11,15 +11,19 @@ from app.core.logging import get_logger
 from app.core.rate_limit import rate_limit
 from app.models.user import User
 from app.repositories.ai_suggestion_repository import AISuggestionRepository
+from app.repositories.ticket_comment_repository import TicketCommentRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.ai_suggestion import AISuggestionOut
 from app.schemas.ticket import (
     TicketAnalyticsOut,
     TicketAssignRequest,
+    TicketCommentCreate,
+    TicketCommentOut,
     TicketCreate,
     TicketListResponse,
     TicketOut,
+    TicketStatusUpdateRequest,
 )
 from app.services.ticket_service import TicketService
 from app.workers.classify import classify_ticket
@@ -33,7 +37,9 @@ require_admin = require_role(UserRole.ADMIN)
 
 
 def get_ticket_service(session: AsyncSession = Depends(get_db)) -> TicketService:
-    return TicketService(TicketRepository(session), UserRepository(session))
+    return TicketService(
+        TicketRepository(session), UserRepository(session), TicketCommentRepository(session)
+    )
 
 
 @router.post(
@@ -138,3 +144,39 @@ async def assign_ticket(
 ) -> TicketOut:
     ticket = await ticket_service.assign_ticket(ticket_id, body.agent_id, user)
     return TicketOut.model_validate(ticket)
+
+
+@router.patch("/{ticket_id}/status", response_model=TicketOut)
+async def update_ticket_status(
+    ticket_id: uuid.UUID,
+    body: TicketStatusUpdateRequest,
+    user: User = Depends(require_agent_or_admin),
+    ticket_service: TicketService = Depends(get_ticket_service),
+) -> TicketOut:
+    ticket = await ticket_service.update_status(ticket_id, body.status, user)
+    return TicketOut.model_validate(ticket)
+
+
+@router.post(
+    "/{ticket_id}/comments",
+    response_model=TicketCommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_ticket_comment(
+    ticket_id: uuid.UUID,
+    body: TicketCommentCreate,
+    user: User = Depends(get_current_user),
+    ticket_service: TicketService = Depends(get_ticket_service),
+) -> TicketCommentOut:
+    comment = await ticket_service.add_comment(ticket_id, user, body.body, body.is_internal)
+    return TicketCommentOut.model_validate(comment)
+
+
+@router.get("/{ticket_id}/comments", response_model=list[TicketCommentOut])
+async def list_ticket_comments(
+    ticket_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    ticket_service: TicketService = Depends(get_ticket_service),
+) -> list[TicketCommentOut]:
+    comments = await ticket_service.list_comments(ticket_id, user)
+    return [TicketCommentOut.model_validate(c) for c in comments]

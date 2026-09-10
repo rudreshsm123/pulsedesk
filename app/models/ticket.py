@@ -1,7 +1,17 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,3 +85,19 @@ class AISuggestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     ticket: Mapped["Ticket"] = relationship(back_populates="ai_suggestion")
+
+
+class TicketComment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "ticket_comments"
+    __table_args__ = (Index("idx_ticket_comments_ticket", "ticket_id", "created_at"),)
+
+    ticket_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False
+    )
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    # Internal notes are agent/admin-only shop talk ("customer is on a legacy plan,
+    # check billing table X") -- never returned to a customer's own comment feed.
+    is_internal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
