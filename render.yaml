@@ -45,8 +45,8 @@ services:
     dockerCommand: >-
       sh -c "python -m alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
-    envVarGroups:
-      - pulsedesk-shared
+    envVars:
+      - fromGroup: pulsedesk-shared
 
   - type: worker
     name: pulsedesk-worker
@@ -54,8 +54,8 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
-    envVarGroups:
-      - pulsedesk-shared
+    envVars:
+      - fromGroup: pulsedesk-shared
 
   - type: worker
     name: pulsedesk-beat
@@ -63,5 +63,5 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
-    envVarGroups:
-      - pulsedesk-shared
+    envVars:
+      - fromGroup: pulsedesk-shared
