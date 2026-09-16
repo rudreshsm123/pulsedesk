@@ -22,6 +22,7 @@ COPY --from=builder /install /usr/local
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini .
+COPY scripts/render_web_start.sh ./render_web_start.sh
 # celery beat writes its schedule file into the working directory at runtime, so /app
 # needs to be writable by the user the process actually runs as, not just readable.
 RUN chown -R appuser:appuser /app

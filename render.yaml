@@ -1,9 +1,15 @@
-# Render Blueprint: deploys the API, Celery worker, and Celery beat as three services
-# from the same Dockerfile. Deliberately does NOT provision Render's own Postgres --
-# Supabase is used instead because it has pgvector built in (Render's managed Postgres
-# extension allow-list is uncertain for pgvector); Redis is Upstash's free tier for the
-# same "don't guess, use what's documented to work" reasoning. See README.md's
-# deployment section for the exact click-through steps.
+# Render Blueprint: a single "web" service running the API, Celery worker, and Celery
+# beat together (via scripts/render_web_start.sh). Render's free tier only supports
+# the "web" service type -- background workers require a paid plan -- so this is a
+# free-tier-specific compromise, not the intended architecture: docker-compose.yml
+# (local dev) still runs api/worker/beat as three independent services, matching how
+# this would actually be deployed with a budget.
+#
+# Deliberately does NOT provision Render's own Postgres -- Supabase is used instead
+# because it has pgvector built in (Render's managed Postgres extension allow-list is
+# uncertain for pgvector); Redis is Upstash's free tier for the same "don't guess, use
+# what's documented to work" reasoning. See README.md's deployment section for the
+# exact click-through steps.
 envVarGroups:
   - name: pulsedesk-shared
     envVars:
@@ -34,34 +40,11 @@ envVarGroups:
 
 services:
   - type: web
-    name: pulsedesk-api
+    name: pulsedesk
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api/v1/health
-    # Runs the migration on every deploy (idempotent -- a no-op if already at head)
-    # rather than provisioning a separate one-off job service, since a single free-tier
-    # demo deployment doesn't need that extra moving part.
-    dockerCommand: >-
-      sh -c "python -m alembic upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
-    envVars:
-      - fromGroup: pulsedesk-shared
-
-  - type: worker
-    name: pulsedesk-worker
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    plan: free
-    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
-    envVars:
-      - fromGroup: pulsedesk-shared
-
-  - type: worker
-    name: pulsedesk-beat
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    plan: free
-    dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
+    dockerCommand: sh ./render_web_start.sh
     envVars:
       - fromGroup: pulsedesk-shared
