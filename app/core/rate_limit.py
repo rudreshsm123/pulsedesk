@@ -1,3 +1,4 @@
+import ssl
 import time
 
 import redis.asyncio as redis
@@ -12,11 +13,19 @@ logger = get_logger("pulsedesk.rate_limit")
 # Connection/socket timeouts are kept short and deliberately fail-open (see below) --
 # rate limiting is a protective best-effort layer, not a correctness guarantee, so a
 # Redis outage should degrade to "unlimited" rather than take the whole API down with it.
+# Without this, a rediss:// URL (managed Redis over TLS, e.g. Upstash in the live
+# deployment) would fail cert verification against Render's CA bundle and silently
+# fail open on every request instead of actually rate limiting -- see
+# app/workers/celery_app.py for the same tradeoff applied to Celery's Redis backend.
+_is_tls_redis = settings.redis_url.startswith("rediss://")
+_redis_kwargs = {"ssl_cert_reqs": ssl.CERT_NONE} if _is_tls_redis else {}
+
 _redis_client = redis.from_url(
     settings.redis_url,
     socket_connect_timeout=0.3,
     socket_timeout=0.3,
     decode_responses=True,
+    **_redis_kwargs,
 )
 
 # Atomic token-bucket refill+consume in a single round trip, keyed per caller.
