@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +34,17 @@ class Settings(BaseSettings):
 
     default_sla_hours: int = 24
     rate_limit_per_minute: int = 60
+
+    @field_validator(
+        "database_url", "redis_url", "jwt_secret_key", "llm_api_key", mode="before"
+    )
+    @classmethod
+    def _strip_whitespace(cls, value: str | None) -> str | None:
+        # Cloud provider env-var UIs (Render's included) have a habit of appending a
+        # trailing newline to pasted values -- e.g. DATABASE_URL ends up as
+        # "...5432/postgres\n", which asyncpg then reports as database "postgres\n"
+        # not existing. Never trust a secret pasted through a web form to be clean.
+        return value.strip() if isinstance(value, str) else value
 
 
 @lru_cache
